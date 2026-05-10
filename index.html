@@ -125,6 +125,80 @@
 
         .question-range strong { color: var(--primary); }
 
+        /* ── Name Input ── */
+        .name-card {
+            background: white;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 28px;
+            margin-bottom: 28px;
+            box-shadow: var(--shadow);
+            transition: border-color .2s ease;
+        }
+
+        .name-card.error { border-color: var(--incorrect-border); }
+
+        .name-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .name-label .required-dot {
+            width: 6px; height: 6px;
+            background: var(--incorrect-border);
+            border-radius: 50%;
+        }
+
+        .name-input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text);
+            background: var(--bg);
+            outline: none;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+
+        .name-input::placeholder { color: #9DB8A0; font-weight: 400; }
+
+        .name-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(46,125,50,.12);
+            background: white;
+        }
+
+        .name-input.error { border-color: var(--incorrect-border); }
+
+        .name-error-msg {
+            display: none;
+            font-size: 13px;
+            color: var(--incorrect-text);
+            font-weight: 500;
+            margin-top: 8px;
+        }
+
+        .name-error-msg.show { display: block; }
+
+        /* ── Score greeting ── */
+        .score-greeting {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .score-greeting strong { color: var(--primary); }
+
         /* ── Instruction ── */
         .instruction-card {
             background: white;
@@ -814,6 +888,23 @@
         <p class="question-range">Questions <strong>11 – 15</strong></p>
     </header>
 
+    <!-- Name Input -->
+    <div class="name-card" id="nameCard">
+        <div class="name-label">
+            <span class="required-dot"></span>
+            Student Name
+        </div>
+        <input
+            type="text"
+            class="name-input"
+            id="nameInput"
+            placeholder="Enter your full name..."
+            autocomplete="off"
+            maxlength="60"
+        >
+        <p class="name-error-msg" id="nameErrorMsg">⚠ Please enter your name before submitting.</p>
+    </div>
+
     <!-- Instruction -->
     <div class="instruction-card">
         <div class="instruction-icon">
@@ -996,6 +1087,7 @@
 
         <!-- Score Card -->
         <div class="score-card">
+            <p class="score-greeting" id="scoreGreeting"></p>
             <div class="score-ring-wrapper">
                 <svg class="score-ring" viewBox="0 0 120 120">
                     <circle class="score-ring-track" cx="60" cy="60" r="50"/>
@@ -1120,6 +1212,17 @@
     const progressSummary = document.getElementById('progressSummary');
     const warningToast    = document.getElementById('warningToast');
     const submitBtn       = document.getElementById('submitBtn');
+    const nameInput       = document.getElementById('nameInput');
+    const nameCard        = document.getElementById('nameCard');
+    const nameErrorMsg    = document.getElementById('nameErrorMsg');
+
+    nameInput.addEventListener('input', () => {
+        if (nameInput.value.trim()) {
+            nameInput.classList.remove('error');
+            nameCard.classList.remove('error');
+            nameErrorMsg.classList.remove('show');
+        }
+    });
 
     function countAnswered() {
         return questions.filter(q => document.querySelector(`input[name="q${q.num}"]:checked`)).length;
@@ -1136,17 +1239,30 @@
 
     // ── Submit ──
     submitBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        let hasError = false;
+
+        if (!name) {
+            nameInput.classList.add('error');
+            nameCard.classList.add('error');
+            nameErrorMsg.classList.add('show');
+            nameInput.focus();
+            hasError = true;
+        }
+
         if (countAnswered() < 5) {
             warningToast.classList.remove('show');
-            void warningToast.offsetWidth; // reflow to restart animation
+            void warningToast.offsetWidth;
             warningToast.classList.add('show');
             setTimeout(() => warningToast.classList.remove('show'), 4000);
-            return;
+            hasError = true;
         }
-        submitQuiz();
+
+        if (hasError) return;
+        submitQuiz(name);
     });
 
-    function submitQuiz() {
+    function submitQuiz(studentName) {
         submitBtn.disabled    = true;
         submitBtn.textContent = 'Submitted ✓';
 
@@ -1196,6 +1312,7 @@
         });
 
         // Score ring animation
+        document.getElementById('scoreGreeting').innerHTML = `Well done, <strong>${studentName}</strong>! Here are your results:`;
         document.getElementById('scoreVal').textContent = score;
         const offset = 314.16 - (score / 5) * 314.16;
         const ringFill = document.getElementById('scoreRingFill');
